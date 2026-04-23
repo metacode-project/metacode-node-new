@@ -3,6 +3,8 @@ import { fastifyTRPCPlugin } from '@trpc/server/adapters/fastify'
 import Fastify, { FastifyInstance } from 'fastify'
 import { generateOpenApiDocument } from 'trpc-to-openapi'
 import { getJwtSecret } from './lib/auth'
+import { createFastifyOptions, registerRequestLoggingHooks } from './lib/logger'
+import { registerFileFetchRoute } from './modules/file'
 import { createContext } from './rpc/context'
 import { appRouter } from './rpc/router'
 
@@ -10,13 +12,22 @@ import { appRouter } from './rpc/router'
 const MaxSize = 1024 * 1024 * 1024
 
 export function buildApp() {
-  const app = Fastify({
-    logger: true,
+  const app: FastifyInstance = Fastify({
     bodyLimit: MaxSize,
+    ...createFastifyOptions(),
   })
+
+  registerRequestLoggingHooks(app)
 
   app.register(import('@fastify/cors'), {
     origin: true,
+  })
+
+  app.register(import('@fastify/multipart'), {
+    limits: {
+      fieldSize: MaxSize,
+      fileSize: MaxSize,
+    },
   })
 
   app.register(import('@fastify/jwt'), {
@@ -31,6 +42,7 @@ export function buildApp() {
     },
   })
 
+  registerFileFetchRoute(app)
   initDoc(app)
 
   return app

@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { TRPCError } from '@trpc/server'
 import { md5Credential } from '../../lib/auth'
 import { prisma } from '../../lib/prisma'
@@ -8,6 +9,7 @@ export interface AuthUser {
   id: string
   username: string
   accountId: string
+  state: number
   fullName: string
   avatar: string
   credential: {
@@ -31,8 +33,8 @@ export interface AuthUser {
 }
 
 async function getUserByAccount(account: string) {
-  const whereOr: Array<{ identifier?: string; accountId?: bigint }> = [
-    { identifier: account }
+  const whereOr: Array<{ identifier?: string, accountId?: bigint }> = [
+    { identifier: account },
   ]
   if (numericAccountRegex.test(account)) {
     whereOr.push({ accountId: BigInt(account) })
@@ -50,7 +52,7 @@ async function getUserByAccount(account: string) {
   })
 }
 
-export async function loginByPassword(username: string, password: string): Promise<{ user: AuthUser; token: string; refreshToken: string }> {
+export async function loginByPassword(username: string, password: string): Promise<{ user: AuthUser, token: string, refreshToken: string }> {
   const credential = await getUserByAccount(username)
 
   if (!credential) {
@@ -102,23 +104,17 @@ export async function getUserByToken(token: string): Promise<AuthUser> {
     where: { accountId: account.id },
   })
 
-  return await buildCurrentUserDto(user, account, credential!)
+  return await buildCurrentUserDto(user, account, credential)
 }
 
-function verifyRefreshToken(token: string): { sub: string; username: string; accountId: string } {
-  const payload = parseJwtPayload(token)
-  if (!payload) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Invalid refresh token' })
-  }
-  return payload
-}
-
-function parseJwtPayload(token: string): { sub: string; username: string; accountId: string } | null {
+function parseJwtPayload(token: string): { sub: string, username: string, accountId: string } | null {
   try {
     const parts = token.split('.')
-    if (parts.length !== 3) return null
+    if (parts.length !== 3)
+      return null
     const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf8'))
-    if (typeof payload.sub !== 'string' || typeof payload.username !== 'string') return null
+    if (typeof payload.sub !== 'string' || typeof payload.username !== 'string')
+      return null
     return payload
   }
   catch {
@@ -127,7 +123,7 @@ function parseJwtPayload(token: string): { sub: string; username: string; accoun
 }
 
 async function buildCurrentUserDto(user: any, account: any, credential: any): Promise<AuthUser> {
-  const username = credential.identifier
+  const username = credential?.identifier ?? account?.username ?? user?.username ?? ''
 
   const spaces = await prisma.accountSpace.findMany({
     where: { accountId: account.id },
@@ -150,11 +146,12 @@ async function buildCurrentUserDto(user: any, account: any, credential: any): Pr
     id: user.id.toString(),
     username,
     accountId: account.id.toString(),
+    state: Number(account.state ?? user.state ?? 1),
     fullName: account.fullName || '',
     avatar: account.avatar || '',
     credential: {
       accountId: account.id.toString(),
-      identifier: credential.identifier,
+      identifier: credential?.identifier ?? username,
       type: 'PASSWORD' as const,
     },
     spaces: spaces.map(as => ({

@@ -6,16 +6,18 @@ import { randomUUID } from 'node:crypto'
 import { createTRPCProxyClient, httpBatchLink } from '@trpc/client'
 import superjson from 'superjson'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { hashPassword } from '../src/lib/auth'
+import { md5Credential } from '../src/lib/auth'
 import { nextSnowflakeId } from '../src/lib/snowflake'
 import { getStorageProvider } from '../src/modules/file/storage'
 
 let app: FastifyInstance
 let prisma: PrismaClient
 let trpcClient: ReturnType<typeof createTRPCProxyClient<AppRouter>>
-const createdFileIds: string[] = []
+const createdFileIds: bigint[] = []
 const createdObjectKeys: string[] = []
 let createdAuthUserId: bigint | null = null
+let createdAccountId: bigint | null = null
+let createdCredentialId: bigint | null = null
 
 describe('file module tRPC integration', () => {
   beforeAll(async () => {
@@ -48,16 +50,38 @@ describe('file module tRPC integration', () => {
     const suffix = randomUUID().slice(0, 8)
     const account = `vitest-file-auth-${suffix}`
     const password = `secret-${suffix}`
+
+    const createdAccount = await prisma.account.create({
+      data: {
+        username: account,
+        fullName: `测试用户-${suffix}`,
+        state: 1,
+      },
+      select: { id: true },
+    })
+    createdAccountId = createdAccount.id
+
     const user = await prisma.user.create({
       data: {
         id: nextSnowflakeId(),
+        state: 1,
         username: account,
-        password: await hashPassword(password),
-        updatedAt: new Date(),
+        accountId: createdAccount.id,
       },
       select: { id: true },
     })
     createdAuthUserId = user.id
+
+    const credential = await prisma.authCredential.create({
+      data: {
+        identifier: account,
+        credential: md5Credential(account, password),
+        identityType: 1,
+        accountId: createdAccount.id,
+      },
+      select: { id: true },
+    })
+    createdCredentialId = credential.id
 
     const loginResult = await noAuthClient.auth.login.mutate({ account, password })
 
@@ -80,8 +104,14 @@ describe('file module tRPC integration', () => {
 
   afterAll(async () => {
     await cleanupFiles()
+    if (createdCredentialId) {
+      await prisma.authCredential.delete({ where: { id: createdCredentialId } })
+    }
     if (createdAuthUserId) {
       await prisma.user.delete({ where: { id: createdAuthUserId } })
+    }
+    if (createdAccountId) {
+      await prisma.account.delete({ where: { id: createdAccountId } })
     }
     await app.close()
     await prisma.$disconnect()
@@ -102,18 +132,15 @@ describe('file module tRPC integration', () => {
 
     expect(created.name).toContain(suffix)
     expect(created.type).toBe('text/plain')
-    expect(created.size).toBe(String(content.byteLength))
+    expect(created.size).toBe(BigInt(content.byteLength))
     expect(created.url).toContain('/file/fetch/')
-    expect(created.createdBy).toBe(createdAuthUserId?.toString() ?? null)
-    expect(created.updatedBy).toBe(createdAuthUserId?.toString() ?? null)
-    expect(created.owner).toBe(createdAuthUserId?.toString() ?? null)
+    expect(created.storageId).toBe('memory')
+    expect(created.createTime).not.toBeNull()
 
-    const persisted = await prisma.file.findUnique({ where: { id: BigInt(created.id) } })
+    const persisted = await prisma.storageFile.findUnique({ where: { id: created.id } })
     expect(persisted).not.toBeNull()
     expect(persisted?.key).toBe(created.key)
-    expect(persisted?.createdBy?.toString()).toBe(createdAuthUserId?.toString())
-    expect(persisted?.updatedBy?.toString()).toBe(createdAuthUserId?.toString())
-    expect(persisted?.owner?.toString()).toBe(createdAuthUserId?.toString())
+    expect(persisted?.storageId).toBe('memory')
   })
 
   it('lists uploaded files', async () => {
@@ -149,7 +176,7 @@ describe('file module tRPC integration', () => {
     createdFileIds.push(added.id)
     expect(added.key).toBe(key)
     expect(Number(added.size)).toBeGreaterThan(0)
-    expect(added.createdBy).toBe(createdAuthUserId?.toString() ?? null)
+    expect(added.storageId).toBe('memory')
   })
 })
 
@@ -168,10 +195,10 @@ async function createFileForTest(suffix: string) {
 async function cleanupFiles() {
   if (createdFileIds.length > 0) {
     const ids = createdFileIds.splice(0, createdFileIds.length)
-    await prisma.file.deleteMany({
+    await prisma.storageFile.deleteMany({
       where: {
         id: {
-          in: ids.map(id => BigInt(id)),
+          in: ids,
         },
       },
     })

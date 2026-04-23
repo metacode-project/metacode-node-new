@@ -11,13 +11,13 @@ const loading = ref(false)
 
 const imageItems = ref<
   Array<{
-    id: string
+    id: bigint
     key: string
     name: string
     type: string
-    size: string
+    size: bigint
     url: string
-    createdAt: Date
+    createTime: Date | null
   }>
 >([])
 
@@ -27,7 +27,11 @@ const serverBaseUrl = 'http://localhost:2023'
 
 const sortedImages = computed(() => {
   return [...imageItems.value].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    (a, b) => {
+      const left = a.createTime ? new Date(a.createTime).getTime() : 0
+      const right = b.createTime ? new Date(b.createTime).getTime() : 0
+      return right - left
+    },
   )
 })
 
@@ -35,7 +39,7 @@ function resolveImageUrl(url: string) {
   return new URL(url, serverBaseUrl).toString()
 }
 
-function formatSize(size: string) {
+function formatSize(size: bigint) {
   const bytes = Number(size)
   if (!Number.isFinite(bytes) || bytes <= 0) {
     return '0 B'
@@ -138,10 +142,10 @@ async function uploadImage() {
   }
 }
 
-async function getSignedUrl(item: { key: string, id: string }) {
+async function getSignedUrl(item: { key: string, id: bigint }) {
   try {
     const result = await trpc.file.getSignedUrl.query({ key: item.key })
-    signedUrlMap.value[item.id] = result.url
+    signedUrlMap.value[item.id.toString()] = result.url
     message.success('已获取签名链接')
   }
   catch (error) {
@@ -203,7 +207,7 @@ loadImages()
         <div v-else class="image-grid">
           <article
             v-for="item in sortedImages"
-            :key="item.id"
+            :key="item.id.toString()"
             class="image-item"
           >
             <img
@@ -233,11 +237,11 @@ loadImages()
                 </a-button>
               </a-space>
               <a-typography-paragraph
-                v-if="signedUrlMap[item.id]"
+                v-if="signedUrlMap[item.id.toString()]"
                 copyable
                 class="signed-url"
               >
-                {{ signedUrlMap[item.id] }}
+                {{ signedUrlMap[item.id.toString()] }}
               </a-typography-paragraph>
             </div>
           </article>

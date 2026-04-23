@@ -13,35 +13,31 @@ const fileSelect = {
   size: true,
   type: true,
   url: true,
-  createdBy: true,
-  updatedBy: true,
-  owner: true,
-  createdAt: true,
-  updatedAt: true,
+  storageId: true,
+  createTime: true,
 } as const
 
 interface FileRow {
   id: bigint
-  key: string
-  name: string
-  size: bigint
-  type: string
-  url: string
-  createdBy: bigint | null
-  updatedBy: bigint | null
-  owner: bigint | null
-  createdAt: Date
-  updatedAt: Date
+  key: string | null
+  name: string | null
+  size: bigint | null
+  type: string | null
+  url: string | null
+  storageId: string | null
+  createTime: Date | null
 }
 
-function serializeFile(file: FileRow) {
+function normalizeFile(file: FileRow) {
   return {
-    ...file,
-    id: file.id.toString(),
-    size: file.size.toString(),
-    createdBy: file.createdBy?.toString() ?? null,
-    updatedBy: file.updatedBy?.toString() ?? null,
-    owner: file.owner?.toString() ?? null,
+    id: file.id,
+    key: file.key ?? '',
+    name: file.name ?? '',
+    size: file.size ?? 0n,
+    type: file.type ?? 'application/octet-stream',
+    url: file.url ?? '',
+    storageId: file.storageId,
+    createTime: file.createTime,
   }
 }
 
@@ -50,7 +46,6 @@ function buildFetchUrl(key: string) {
 }
 
 function sanitizeFileName(filename: string) {
-  // eslint-disable-next-line e18e/prefer-static-regex
   return filename.replace(/[^\w.-]/g, '_')
 }
 
@@ -71,10 +66,8 @@ async function createFileRecord(input: {
   name: string
   type: string
   size: bigint
-  operatorId: string
 }) {
-  const operator = BigInt(input.operatorId)
-  const file = await prisma.file.create({
+  const file = await prisma.storageFile.create({
     data: {
       id: nextSnowflakeId(),
       key: input.key,
@@ -82,15 +75,13 @@ async function createFileRecord(input: {
       type: input.type,
       size: input.size,
       url: buildFetchUrl(input.key),
-      createdBy: operator,
-      updatedBy: operator,
-      owner: operator,
-      updatedAt: new Date(),
+      storageId: process.env.FILE_SERVER?.trim() || 'memory',
+      createTime: new Date(),
     },
     select: fileSelect,
   })
 
-  return serializeFile(file)
+  return normalizeFile(file)
 }
 
 export async function listFiles(input: FileListInput) {
@@ -107,23 +98,23 @@ export async function listFiles(input: FileListInput) {
     : undefined
 
   const [items, total] = await prisma.$transaction([
-    prisma.file.findMany({
+    prisma.storageFile.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createTime: 'desc' }, { id: 'desc' }],
       skip: (page - 1) * pageSize,
       take: pageSize,
       select: fileSelect,
     }),
-    prisma.file.count({ where }),
+    prisma.storageFile.count({ where }),
   ])
 
   return {
-    items: items.map(serializeFile),
+    items: items.map(normalizeFile),
     total,
   }
 }
 
-export async function createFile(input: CreateFileInput, operatorId: string) {
+export async function createFile(input: CreateFileInput) {
   const storage = getStorageProvider()
   await storage.ensureBucket()
 
@@ -137,17 +128,16 @@ export async function createFile(input: CreateFileInput, operatorId: string) {
     name: input.name.trim(),
     type: input.type.trim(),
     size: BigInt(body.byteLength),
-    operatorId,
   })
 }
 
-export async function addFile(input: AddFileInput, operatorId: string) {
+export async function addFile(input: AddFileInput) {
   const key = input.key.trim()
   const storage = getStorageProvider()
   const metadata = await storage.getObjectMeta(key).catch(() => null)
 
   if (!metadata) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: `Could not find file ${key}.` })
+    throw new TRPCError({ code: 'NOT_FOUND', message: `找不到文件：${key}` })
   }
 
   return createFileRecord({
@@ -155,18 +145,17 @@ export async function addFile(input: AddFileInput, operatorId: string) {
     name: input.name.trim(),
     type: metadata.type,
     size: metadata.size,
-    operatorId,
   })
 }
 
 export async function getSignedUrl(input: FileSignedUrlInput) {
-  const file = await prisma.file.findUnique({
+  const file = await prisma.storageFile.findUnique({
     where: { key: input.key },
     select: { key: true },
   })
 
-  if (!file) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: `Could not find file ${input.key}.` })
+  if (!file?.key) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: `找不到文件：${input.key}` })
   }
 
   const storage = getStorageProvider()
@@ -185,13 +174,13 @@ export async function listStorageBuckets() {
 }
 
 export async function getFileStreamByKey(key: string) {
-  const file = await prisma.file.findUnique({
+  const file = await prisma.storageFile.findUnique({
     where: { key },
     select: { key: true, name: true, type: true },
   })
 
-  if (!file) {
-    throw new TRPCError({ code: 'NOT_FOUND', message: `Could not find file ${key}.` })
+  if (!file?.key) {
+    throw new TRPCError({ code: 'NOT_FOUND', message: `找不到文件：${key}` })
   }
 
   const storage = getStorageProvider()
@@ -199,7 +188,7 @@ export async function getFileStreamByKey(key: string) {
 
   return {
     stream,
-    name: file.name,
-    type: file.type,
+    name: file.name ?? file.key,
+    type: file.type ?? 'application/octet-stream',
   }
 }

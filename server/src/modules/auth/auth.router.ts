@@ -1,12 +1,13 @@
-import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { jwtSignOptions, jwtRefreshSignOptions } from '../../lib/auth'
+import { z } from 'zod'
+import { jwtRefreshSignOptions, jwtSignOptions } from '../../lib/auth'
 import { authedProcedure, publicProcedure, router } from '../../rpc/trpc'
 import { getUserByToken } from './auth.service'
 import { loginInputSchema, loginOutputSchema, userOutputSchema } from './dto'
 
-const outputValidator = <TSchema extends z.ZodTypeAny>(schema: TSchema) =>
-  schema as z.ZodType<z.output<TSchema>>
+function outputValidator<TSchema extends z.ZodTypeAny>(schema: TSchema) {
+  return schema as z.ZodType<z.output<TSchema>>
+}
 
 export const authRouter = router({
   login: publicProcedure
@@ -19,7 +20,12 @@ export const authRouter = router({
     .input(loginInputSchema)
     .output(outputValidator(loginOutputSchema))
     .mutation(async ({ ctx, input }) => {
-      const { user } = await import('./auth.service').then(m => m.loginByPassword(input.username, input.password))
+      const account = input.account ?? input.username
+      if (!account) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: '账号不能为空' })
+      }
+
+      const { user } = await import('./auth.service').then(m => m.loginByPassword(account, input.password))
 
       const jwt = (ctx.req.server as typeof ctx.req.server & {
         jwt: { sign: (payload: object, options: object) => string }
@@ -52,7 +58,7 @@ export const authRouter = router({
       const refreshToken = refreshTokenMatch ? refreshTokenMatch[1] : undefined
 
       if (!refreshToken) {
-        throw new Error('Refresh token not found')
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: '刷新令牌不存在' })
       }
 
       const jwt = (ctx.req.server as typeof ctx.req.server & {
@@ -62,7 +68,12 @@ export const authRouter = router({
         }
       }).jwt
 
-      jwt.verify<{ sub: string; username: string; accountId: string }>(refreshToken)
+      try {
+        jwt.verify<{ sub: string, username: string, accountId: string }>(refreshToken)
+      }
+      catch {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: '刷新令牌无效' })
+      }
       const user = await getUserByToken(refreshToken)
 
       const newToken = jwt.sign(

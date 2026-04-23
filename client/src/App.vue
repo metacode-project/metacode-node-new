@@ -4,7 +4,6 @@ import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import IconHome from '~icons/lucide/house'
 import IconImageUp from '~icons/lucide/image-up'
 import IconLogOut from '~icons/lucide/log-out'
-import IconTags from '~icons/lucide/tags'
 import IconUser from '~icons/lucide/user'
 import { clearAuthToken, isLoggedIn } from './shared/utils/auth'
 import { trpc } from './trpc'
@@ -56,10 +55,6 @@ watch(
       <RouterLink class="flex items-center gap-1.5 rounded-md px-2 py-1 transition hover:bg-slate-100 hover:text-sky-600" to="/">
         <IconHome class="size-4" />
         首页
-      </RouterLink>
-      <RouterLink class="flex items-center gap-1.5 rounded-md px-2 py-1 transition hover:bg-slate-100 hover:text-sky-600" to="/tags">
-        <IconTags class="size-4" />
-        标签管理
       </RouterLink>
       <RouterLink class="flex items-center gap-1.5 rounded-md px-2 py-1 transition hover:bg-slate-100 hover:text-sky-600" to="/file-demo">
         <IconImageUp class="size-4" />

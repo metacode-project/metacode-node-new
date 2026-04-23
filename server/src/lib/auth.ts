@@ -2,14 +2,14 @@ import * as crypto from 'node:crypto'
 import { hash, verify } from '@node-rs/argon2'
 
 export interface JwtPayload {
-  sub: string      // user.id (BigInt as string)
+  sub: string // user.id (BigInt as string)
   username: string
   accountId: string // account.id (BigInt as string)
 }
 
 export const JWT_ALGORITHM = 'HS256'
-export const JWT_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 7  // 7 days
-export const JWT_REFRESH_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30  // 30 days
+export const JWT_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 7 // 7 days
+export const JWT_REFRESH_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 30 // 30 days
 
 export function getJwtSecret() {
   return process.env.JWT_SECRET || 'metacode-dev-secret-2026'

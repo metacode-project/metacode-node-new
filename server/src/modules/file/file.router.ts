@@ -35,7 +35,7 @@ export const fileRouter = router({
     })
     .input(createFileInputSchema)
     .output(fileSchema)
-    .mutation(({ ctx, input }) => createFile(input, ctx.user.id)),
+    .mutation(({ input }) => createFile(input)),
 
   add: authedProcedure
     .meta({
@@ -46,7 +46,7 @@ export const fileRouter = router({
     })
     .input(addFileInputSchema)
     .output(fileSchema)
-    .mutation(({ ctx, input }) => addFile(input, ctx.user.id)),
+    .mutation(({ input }) => addFile(input)),
 
   sts: authedProcedure
     .meta({

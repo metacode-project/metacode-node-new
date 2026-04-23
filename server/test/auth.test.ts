@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { createTRPCProxyClient, httpBatchLink, TRPCClientError } from '@trpc/client'
 import superjson from 'superjson'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { hashPassword } from '../src/lib/auth'
+import { md5Credential } from '../src/lib/auth'
 import { nextSnowflakeId } from '../src/lib/snowflake'
 
 let app: FastifyInstance
@@ -15,6 +15,8 @@ let authClient: ReturnType<typeof createTRPCProxyClient<AppRouter>>
 let account: string
 let password: string
 let createdAuthUserId: bigint | null = null
+let createdAccountId: bigint | null = null
+let createdCredentialId: bigint | null = null
 
 describe('auth module tRPC integration', () => {
   beforeAll(async () => {
@@ -45,16 +47,37 @@ describe('auth module tRPC integration', () => {
     const suffix = randomUUID().slice(0, 8)
     account = `vitest-auth-${suffix}`
     password = `secret-${suffix}`
+    const createdAccount = await prisma.account.create({
+      data: {
+        username: account,
+        fullName: `测试用户-${suffix}`,
+        state: 1,
+      },
+      select: { id: true },
+    })
+    createdAccountId = createdAccount.id
+
     const user = await prisma.user.create({
       data: {
         id: nextSnowflakeId(),
+        state: 1,
         username: account,
-        password: await hashPassword(password),
-        updatedAt: new Date(),
+        accountId: createdAccount.id,
       },
       select: { id: true },
     })
     createdAuthUserId = user.id
+
+    const credential = await prisma.authCredential.create({
+      data: {
+        identifier: account,
+        credential: md5Credential(account, password),
+        identityType: 1,
+        accountId: createdAccount.id,
+      },
+      select: { id: true },
+    })
+    createdCredentialId = credential.id
 
     const loginResult = await noAuthClient.auth.login.mutate({ account, password })
     authClient = createTRPCProxyClient<AppRouter>({
@@ -71,8 +94,14 @@ describe('auth module tRPC integration', () => {
   }, 30_000)
 
   afterAll(async () => {
+    if (createdCredentialId && prisma) {
+      await prisma.authCredential.delete({ where: { id: createdCredentialId } })
+    }
     if (createdAuthUserId && prisma) {
       await prisma.user.delete({ where: { id: createdAuthUserId } })
+    }
+    if (createdAccountId && prisma) {
+      await prisma.account.delete({ where: { id: createdAccountId } })
     }
     if (app) {
       await app.close()

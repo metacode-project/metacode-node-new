@@ -14,7 +14,7 @@ const config: PlaywrightTestConfig = {
   use: {
     ...devices['Desktop Chrome'],
     baseURL: baseUrl,
-    headless: opts.headless,
+    headless: opts.headless ?? false,
     video: process.env['CI'] ? 'retain-on-failure' : 'off',
     screenshot: process.env['CI'] ? 'only-on-failure' : 'off',
     channel: 'chrome',

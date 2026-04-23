@@ -29,7 +29,7 @@ export function registerFileFetchRoute(app: FastifyInstance) {
       }
 
       request.log.error({ error }, 'Failed to fetch file stream')
-      return reply.status(500).send({ message: 'Failed to fetch file' })
+      return reply.status(500).send({ message: '文件读取失败' })
     }
   })
 }

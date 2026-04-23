@@ -2,24 +2,16 @@ import z from 'zod'
 import { appTemplateRouter } from '../modules/app-template'
 import { authRouter } from '../modules/auth'
 import { designRouter } from '../modules/design'
+import { fileRouter } from '../modules/file'
 import { runtimeRouter } from '../modules/runtime'
 import { publicProcedure, router } from './trpc'
-
-// TODO: migrate these modules from metacode-node
-// import { fileRouter } from '../modules/file'
-// import { subRouter } from '../modules/sub'
-// import { tagsRouter } from '../modules/tag'
-// import { usersRouter } from '../modules/user'
 
 const routes = {
   auth: authRouter,
   design: designRouter,
   runtime: runtimeRouter,
   appTemplate: appTemplateRouter,
-  // file: fileRouter,
-  // sub: subRouter,
-  // tags: tagsRouter,
-  // users: usersRouter,
+  file: fileRouter,
   health: publicProcedure
     .meta({
       openapi: {

@@ -1,17 +1,14 @@
 import z from 'zod'
 
 export const fileSchema = z.object({
-  id: z.string(),
+  id: z.bigint(),
   key: z.string(),
   name: z.string(),
-  size: z.string(),
+  size: z.bigint(),
   type: z.string(),
   url: z.string(),
-  createdBy: z.string().nullable(),
-  updatedBy: z.string().nullable(),
-  owner: z.string().nullable(),
-  createdAt: z.date(),
-  updatedAt: z.date(),
+  storageId: z.string().nullable(),
+  createTime: z.date().nullable(),
 })
 
 export const fileListInputSchema = z.object({

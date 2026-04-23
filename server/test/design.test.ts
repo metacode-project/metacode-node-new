@@ -230,12 +230,16 @@ describe('design module tRPC integration', () => {
     })
     expect(histories.length).toBeGreaterThanOrEqual(2)
 
-    const earliestHistory = histories[histories.length - 1]
+    const targetHistory = histories.find(history =>
+      history.name === 'v1-name'
+      && history.content === 'v1-content',
+    ) ?? histories[histories.length - 1]
+
     const restored = await trpcClient.design.views.restore.mutate({
       appId,
       itemId,
       viewId,
-      historyId: earliestHistory.id,
+      historyId: targetHistory.id,
       branchId,
     })
 

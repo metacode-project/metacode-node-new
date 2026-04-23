@@ -1,7 +1,10 @@
 import { z } from 'zod'
 
+const usernameOrAccountSchema = z.string().trim().min(1)
+
 export const loginInputSchema = z.object({
-  username: z.string().min(1),
+  username: usernameOrAccountSchema.optional(),
+  account: usernameOrAccountSchema.optional(),
   password: z.string().min(1),
 })
 
@@ -9,6 +12,7 @@ export const userOutputSchema = z.object({
   id: z.string(),
   username: z.string(),
   accountId: z.string(),
+  state: z.number().int(),
   fullName: z.string(),
   avatar: z.string(),
   credential: z.object({

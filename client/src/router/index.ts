@@ -20,15 +20,6 @@ const router = createRouter({
       component: () => import('../login/LoginView.vue'),
     },
     {
-      path: '/tags',
-      name: 'tags',
-      meta: {
-        title: '标签管理',
-        requiresAuth: true,
-      },
-      component: () => import('../tag-manage/TagManage.vue'),
-    },
-    {
       path: '/file-demo',
       name: 'file-demo',
       meta: {
