@@ -9,22 +9,26 @@ const selectedFile = ref<File | null>(null)
 const uploading = ref(false)
 const loading = ref(false)
 
-const imageItems = ref<Array<{
-  id: string
-  key: string
-  name: string
-  type: string
-  size: string
-  url: string
-  createdAt: Date
-}>>([])
+const imageItems = ref<
+  Array<{
+    id: string
+    key: string
+    name: string
+    type: string
+    size: string
+    url: string
+    createdAt: Date
+  }>
+>([])
 
 const signedUrlMap = ref<Record<string, string>>({})
 
-const serverBaseUrl = 'http://localhost:2022'
+const serverBaseUrl = 'http://localhost:2023'
 
 const sortedImages = computed(() => {
-  return [...imageItems.value].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+  return [...imageItems.value].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
 })
 
 function resolveImageUrl(url: string) {
@@ -94,7 +98,9 @@ async function loadImages() {
   loading.value = true
   try {
     const result = await trpc.file.list.query({ page: 1, pageSize: 50 })
-    imageItems.value = result.items.filter(item => item.type.startsWith('image/'))
+    imageItems.value = result.items.filter(item =>
+      item.type.startsWith('image/'),
+    )
   }
   catch (error) {
     message.error(normalizeErrorMessage(error, '加载图片列表失败'))
@@ -179,7 +185,8 @@ loadImages()
           <a-button type="primary" :loading="uploading" @click="uploadImage">
             上传到服务端
           </a-button>
-          <span class="hint">接口: <code>file.create</code> / <code>file.list</code> / <code>file.getSignedUrl</code></span>
+          <span class="hint">接口: <code>file.create</code> / <code>file.list</code> /
+            <code>file.getSignedUrl</code></span>
         </a-space>
       </a-card>
 
@@ -188,11 +195,23 @@ loadImages()
           已上传图片（{{ sortedImages.length }}）
         </template>
 
-        <a-empty v-if="sortedImages.length === 0" description="暂无图片，请先上传" />
+        <a-empty
+          v-if="sortedImages.length === 0"
+          description="暂无图片，请先上传"
+        />
 
         <div v-else class="image-grid">
-          <article v-for="item in sortedImages" :key="item.id" class="image-item">
-            <img :src="resolveImageUrl(item.url)" :alt="item.name" class="preview" loading="lazy">
+          <article
+            v-for="item in sortedImages"
+            :key="item.id"
+            class="image-item"
+          >
+            <img
+              :src="resolveImageUrl(item.url)"
+              :alt="item.name"
+              class="preview"
+              loading="lazy"
+            >
             <div class="meta">
               <p class="name" :title="item.name">
                 {{ item.name }}
@@ -204,11 +223,20 @@ loadImages()
                 <a-button size="small" @click="getSignedUrl(item)">
                   获取签名链接
                 </a-button>
-                <a-button size="small" type="link" :href="resolveImageUrl(item.url)" target="_blank">
+                <a-button
+                  size="small"
+                  type="link"
+                  :href="resolveImageUrl(item.url)"
+                  target="_blank"
+                >
                   查看原图
                 </a-button>
               </a-space>
-              <a-typography-paragraph v-if="signedUrlMap[item.id]" copyable class="signed-url">
+              <a-typography-paragraph
+                v-if="signedUrlMap[item.id]"
+                copyable
+                class="signed-url"
+              >
                 {{ signedUrlMap[item.id] }}
               </a-typography-paragraph>
             </div>

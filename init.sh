@@ -29,6 +29,6 @@ echo "Waiting for server to start..."
 sleep 5
 
 echo -e "${GREEN}✓ Initialization complete!${NC}"
-echo -e "${GREEN}✓ backend server running at http://localhost:2022/ and frontend server running at http://localhost:5173/${NC}"
+echo -e "${GREEN}✓ backend server running at http://localhost:2023/ and frontend server running at http://localhost:5174/${NC}"
 echo ""
 echo "Ready to continue development."

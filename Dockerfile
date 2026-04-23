@@ -29,6 +29,6 @@ COPY --from=build /app/out ./
 RUN apk add --no-cache tzdata
 ENV TZ=Asia/Shanghai
 
-EXPOSE 2022
+EXPOSE 2023
 
 CMD ["node", "dist/index.js"]

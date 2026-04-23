@@ -1,7 +1,7 @@
 import type { PlaywrightTestConfig } from '@playwright/test';
 import { devices } from '@playwright/test';
 
-const baseUrl = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:5173';
+const baseUrl = process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:5174';
 console.log(`ℹ️ Using base URL "${baseUrl}"`);
 
 const opts = {
@@ -17,7 +17,7 @@ const config: PlaywrightTestConfig = {
     headless: opts.headless,
     video: process.env['CI'] ? 'retain-on-failure' : 'off',
     screenshot: process.env['CI'] ? 'only-on-failure' : 'off',
-    channel: 'chrome'
+    channel: 'chrome',
   },
   retries: process.env['CI'] ? 3 : 0,
 };

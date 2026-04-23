@@ -41,7 +41,7 @@ async function initDoc(app: FastifyInstance) {
     title: 'tRPC OpenAPI',
     description: 'API docs for this tRPC project.',
     version: '1.0.0',
-    baseUrl: 'http://localhost:2022/rpc',
+    baseUrl: 'http://localhost:2023/rpc',
     securitySchemes: {
       bearerAuth: {
         type: 'http',

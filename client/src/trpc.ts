@@ -6,7 +6,7 @@ import { getAuthToken } from './shared/utils/auth'
 export const trpc = createTRPCProxyClient<AppRouter>({
   links: [
     httpBatchLink({
-      url: 'http://localhost:2022/rpc',
+      url: 'http://localhost:2023/rpc',
       transformer: superjson,
       headers() {
         const token = getAuthToken()

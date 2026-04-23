@@ -113,17 +113,17 @@ server/
 
 ### 完成状态
 
-| 任务 | 状态 | 备注 |
-|------|------|------|
-| package.json 调整 | ✅ | 替换为 metacode-node 依赖，pnpm workspace 简化为只有 server |
-| schema.prisma 替换 | ✅ | 直接复制 metacode-node 的 schema |
-| prisma.config.ts | ✅ | 使用 @prisma/config 的 defineConfig |
-| lib/prisma.ts | ✅ | 保持单例，适配 Prisma 7 + MariaDB adapter |
-| app.ts + index.ts | ✅ | CORS/JWT/TRPC/Scalar API 文档已注册 |
-| lib/auth.ts | ✅ | md5Credential, hashPassword, JWT 常量 |
-| router.ts 骨架 | ✅ | health + auth 两个 route |
-| db:generate | ✅ | Prisma Client 生成到 src/generated/prisma |
-| 健康检查测试 | ✅ | GET /rpc/health 返回 { message: 'ok' } |
+| 任务               | 状态 | 备注                                                        |
+| ------------------ | ---- | ----------------------------------------------------------- |
+| package.json 调整  | ✅   | 替换为 metacode-node 依赖，pnpm workspace 简化为只有 server |
+| schema.prisma 替换 | ✅   | 直接复制 metacode-node 的 schema                            |
+| prisma.config.ts   | ✅   | 使用 @prisma/config 的 defineConfig                         |
+| lib/prisma.ts      | ✅   | 保持单例，适配 Prisma 7 + MariaDB adapter                   |
+| app.ts + index.ts  | ✅   | CORS/JWT/TRPC/Scalar API 文档已注册                         |
+| lib/auth.ts        | ✅   | md5Credential, hashPassword, JWT 常量                       |
+| router.ts 骨架     | ✅   | health + auth 两个 route                                    |
+| db:generate        | ✅   | Prisma Client 生成到 src/generated/prisma                   |
+| 健康检查测试       | ✅   | GET /rpc/health 返回 { message: 'ok' }                      |
 
 ### 关键实现细节
 
@@ -141,20 +141,20 @@ server/
 
 ### 完成状态
 
-| 任务 | 状态 | 备注 |
-|------|------|------|
-| auth/dto.ts | ✅ | loginInputSchema, userOutputSchema, loginOutputSchema |
-| auth.service.ts | ✅ | loginByPassword, getUserByToken, buildCurrentUserDto |
-| auth.router.ts | ✅ | login, refresh, me 三个 procedure |
-| context.ts | ✅ | JWT payload 解析，ctx.user 注入 |
-| e2e 测试 | ⏳ 待做 | 尚未编写 |
+| 任务            | 状态    | 备注                                                  |
+| --------------- | ------- | ----------------------------------------------------- |
+| auth/dto.ts     | ✅      | loginInputSchema, userOutputSchema, loginOutputSchema |
+| auth.service.ts | ✅      | loginByPassword, getUserByToken, buildCurrentUserDto  |
+| auth.router.ts  | ✅      | login, refresh, me 三个 procedure                     |
+| context.ts      | ✅      | JWT payload 解析，ctx.user 注入                       |
+| e2e 测试        | ⏳ 待做 | 尚未编写                                              |
 
 ### 关键实现细节
 
 - 密码校验：`md5(username + password)` → BigInt hex 字符串（与 Java 后端一致）
 - 账号查询链路：`auth_credential.identifier` → `account.id` → `account.user[0]`
 - `getUserByToken` 解析 JWT payload（不重验，因为 authedProcedure 已验过）
-- 服务端口：2022，监听 0.0.0.0
+- 服务端口：2023，监听 0.0.0.0
 - 数据库：本地 MySQL `metacode-node`，Prisma db push 已同步 schema
 
 ### 测试结果（2026-04-22）
@@ -166,17 +166,18 @@ GET  /rpc/health    → 200 ✓
 ```
 
 export async function login(input: LoginInput, jwt: FastifyJWT) {
-  const credential = await prisma.authCredential.findFirst({
-    where: { identifier: input.username },
-    include: { account: { include: { user: true } } },
-  })
+const credential = await prisma.authCredential.findFirst({
+where: { identifier: input.username },
+include: { account: { include: { user: true } } },
+})
 
-  if (!credential || credential.credential !== legacyCredentialHash(input.username, input.password)) {
-    throw new TRPCError({ code: 'UNAUTHORIZED', message: '用户名或密码错误' })
-  }
-  // ...build current user dto
+if (!credential || credential.credential !== legacyCredentialHash(input.username, input.password)) {
+throw new TRPCError({ code: 'UNAUTHORIZED', message: '用户名或密码错误' })
 }
-```
+// ...build current user dto
+}
+
+````
 
 ```ts
 // server/src/modules/auth/auth.router.ts（片段）
@@ -190,7 +191,7 @@ login: publicProcedure.input(loginInputSchema).mutation(async ({ ctx, input }) =
   })
   return result.user
 })
-```
+````
 
 ---
 
@@ -232,20 +233,33 @@ login: publicProcedure.input(loginInputSchema).mutation(async ({ ctx, input }) =
 export const designRouter = router({
   apps: router({
     list: authedProcedure.query(() => designService.findApps()),
-    get: authedProcedure.input(appIdSchema).query(({ input }) => designService.findAppByAppId(input.appId)),
-    create: authedProcedure.input(createAppSchema).mutation(({ input }) => designService.createApp(input)),
+    get: authedProcedure
+      .input(appIdSchema)
+      .query(({ input }) => designService.findAppByAppId(input.appId)),
+    create: authedProcedure
+      .input(createAppSchema)
+      .mutation(({ input }) => designService.createApp(input)),
   }),
   deployment: router({
-    create: authedProcedure.input(deploySchema).mutation(({ input }) =>
-      designService.deployApp(input.appId, input.branchId, input.remark, input.version)),
+    create: authedProcedure
+      .input(deploySchema)
+      .mutation(({ input }) =>
+        designService.deployApp(
+          input.appId,
+          input.branchId,
+          input.remark,
+          input.version,
+        ),
+      ),
   }),
-})
+});
 ```
 
 ```ts
 // snapshot BigInt 安全序列化（片段）
 const configuration = JSON.stringify(snapshot, (_, value) =>
-  typeof value === 'bigint' ? value.toString() : value)
+  typeof value === "bigint" ? value.toString() : value,
+);
 ```
 
 ---
@@ -276,15 +290,18 @@ const configuration = JSON.stringify(snapshot, (_, value) =>
 
 ```ts
 // server/src/modules/runtime/runtime.service.ts（片段）
-function buildTree(items: AppItemRow[], parentId: string | null): RuntimeItem[] {
+function buildTree(
+  items: AppItemRow[],
+  parentId: string | null,
+): RuntimeItem[] {
   return items
-    .filter(item => item.parentId === parentId)
-    .map(item => ({
+    .filter((item) => item.parentId === parentId)
+    .map((item) => ({
       id: item.id,
-      name: item.name ?? '',
+      name: item.name ?? "",
       type: item.type!,
       children: buildTree(items, item.id),
-    }))
+    }));
 }
 ```
 
@@ -322,14 +339,14 @@ const idMapping = {
   appDefinitionId: new Map([[config.appDefinition.id, randomUUID()]]),
   tableId: new Map<string, string>(),
   fieldId: new Map<string, string>(),
-}
+};
 
 await prisma.$transaction(async (tx) => {
   const newSchemaId = config.schema
     ? await cloneSchema(config.schema, idMapping, dto.tenantId, tx)
-    : null
-  await createAppFromConfig(config, idMapping, dto, newSchemaId, tx)
-})
+    : null;
+  await createAppFromConfig(config, idMapping, dto, newSchemaId, tx);
+});
 ```
 
 ---
@@ -369,11 +386,11 @@ await prisma.$transaction(async (tx) => {
 // server/src/lib/errors.ts（片段）
 export function mapPrismaError(error: unknown) {
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    if (error.code === 'P2002') {
-      return new TRPCError({ code: 'CONFLICT', message: '数据唯一性冲突' })
+    if (error.code === "P2002") {
+      return new TRPCError({ code: "CONFLICT", message: "数据唯一性冲突" });
     }
   }
-  return null
+  return null;
 }
 ```
 
@@ -446,7 +463,7 @@ errorFormatter({ error, shape }) {
    - 关键模块测试文件全部通过：`auth/design/runtime/app-template/file`
 
 5. **交付结果可观测**
-   - 服务启动后 `http://localhost:2022/doc` 可见 API 文档。
+   - 服务启动后 `http://localhost:2023/doc` 可见 API 文档。
    - 关键流程可通过测试脚本或 tRPC 客户端示例复现。
 
 ---
