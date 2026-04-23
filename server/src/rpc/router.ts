@@ -1,6 +1,7 @@
 import z from 'zod'
 import { authRouter } from '../modules/auth'
 import { designRouter } from '../modules/design'
+import { runtimeRouter } from '../modules/runtime'
 import { publicProcedure, router } from './trpc'
 
 // TODO: migrate these modules from metacode-node
@@ -12,6 +13,7 @@ import { publicProcedure, router } from './trpc'
 const routes = {
   auth: authRouter,
   design: designRouter,
+  runtime: runtimeRouter,
   // file: fileRouter,
   // sub: subRouter,
   // tags: tagsRouter,
