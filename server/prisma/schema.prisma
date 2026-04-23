@@ -1,0 +1,901 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../src/generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum ClientTypeEnum {
+  PC
+  H5
+}
+
+enum AppItemCategory {
+  DATA
+  FLOW
+  STAT
+  BI
+  CUSTOM
+  THIRD_LINK
+}
+
+enum AppItemType {
+  ITEM_GROUP
+  ITEM
+}
+
+enum AppStatus {
+  RUNNING
+  MAINTENANCE
+  NOT_RELEASED
+}
+
+enum AppViewCategory {
+  COMMON
+  USER
+}
+
+enum AppViewPlatform {
+  PC
+  H5
+}
+
+enum AppViewScene {
+  LIST
+  DETAIL
+}
+
+enum AppViewType {
+  TABLE_VIEW
+  CARD_VIEW
+  KANBAN_VIEW
+  CALENDAR_VIEW
+  DESIGNER_VIEW
+  GANTT_VIEW
+}
+
+model User {
+  id                                                     BigInt                @id @default(autoincrement())
+  createdAt                                              DateTime?             @map("created_at") @db.DateTime(6)
+  avatar                                                 String?               @db.VarChar(255)
+  description                                            String?               @db.VarChar(255)
+  fullName                                               String?               @map("full_name") @db.VarChar(255)
+  gender                                                 Int?                  @db.TinyInt
+  leaderIds                                              String?               @map("leader_ids") @db.VarChar(255)
+  state                                                  Int                   @db.TinyInt
+  username                                               String?               @db.VarChar(255)
+  mainJobId                                              BigInt?               @map("main_job_id")
+  leaderId                                               BigInt?               @map("leader_id")
+  delegateId                                             BigInt?               @map("delegate_id")
+  createTime                                             DateTime?             @map("create_time") @db.DateTime(6)
+  tenantId                                               String?               @map("tenant_id") @db.VarChar(255)
+  accountId                                              BigInt?               @map("account_id")
+  appDataShare                                           AppDataShare[]
+  appView                                                AppView[]
+  authSecret                                             AuthSecret[]
+  message                                                Message[]
+  messageNotificationMessageNotificationReceiverIdToUser MessageNotification[] @relation("message_notification_receiver_idTouser")
+  messageNotificationMessageNotificationSenderIdToUser   MessageNotification[] @relation("message_notification_sender_idTouser")
+  organizationOrganizationLeaderIdToUser                 Organization?         @relation("organization_leader_idTouser")
+  roleMember                                             RoleMember[]
+  spaceInvitation                                        SpaceInvitation[]
+  userUserDelegateIdToUser                               User?                 @relation("user_delegate_idTouser", fields: [delegateId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK25f28xhoa4jw0ucragc1ehfic")
+  otherUserUserDelegateIdToUser                          User[]                @relation("user_delegate_idTouser")
+  account                                                Account?              @relation(fields: [accountId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_nrrhhb0bsexvi8ch6wnon9uog")
+  userUserLeaderIdToUser                                 User?                 @relation("user_leader_idTouser", fields: [leaderId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKjd7op1vctb1hw0m1p0tiht690")
+  otherUserUserLeaderIdToUser                            User[]                @relation("user_leader_idTouser")
+  organizationUserMainJobIdToOrganization                Organization?         @relation("user_main_job_idToorganization", fields: [mainJobId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKrcs01m1fnlkhq7fx4nqarpll6")
+  userApp                                                UserApp[]
+  userOrganization                                       UserOrganization[]
+
+  @@index([delegateId], map: "FKajq3s3dlrtvc7ogfi5y7kn6w2")
+  @@index([accountId], map: "FKgf2sfm2i6rsce1dvpdr0bchp6")
+  @@index([leaderId], map: "FKjd7op1vctb1hw0m1p0tiht690")
+  @@index([mainJobId], map: "FKrcs01m1fnlkhq7fx4nqarpll6")
+  @@map("user")
+}
+
+model Account {
+  id              BigInt            @id @default(autoincrement())
+  avatar          String?           @db.VarChar(255)
+  fullName        String?           @map("full_name") @db.VarChar(255)
+  gender          Int?              @db.TinyInt
+  state           Int               @db.TinyInt
+  username        String?           @db.VarChar(255)
+  delegateId      BigInt?           @map("delegate_id")
+  defaultSpaceId  BigInt?           @map("default_space_id")
+  space           Space?            @relation(fields: [defaultSpaceId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK71h5w1260n8c4gp0itejxbr8n")
+  account         Account?          @relation("accountToaccount", fields: [delegateId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK9on64tjyfn9lfi46e68cjmf0i")
+  otherAccount    Account[]         @relation("accountToaccount")
+  accountSpace    AccountSpace[]
+  authCredential  AuthCredential[]
+  spaceInvitation SpaceInvitation[]
+  user            User[]
+
+  @@index([defaultSpaceId], map: "FK71h5w1260n8c4gp0itejxbr8n")
+  @@index([delegateId], map: "FK9on64tjyfn9lfi46e68cjmf0i")
+  @@map("account")
+}
+
+model AccountSpace {
+  accountId BigInt  @map("account_id")
+  spacesId  BigInt  @map("spaces_id")
+  account   Account @relation(fields: [accountId], references: [id], onUpdate: Restrict, map: "FK745j3688rj59bnnabxypw63sl")
+  space     Space   @relation(fields: [spacesId], references: [id], onUpdate: Restrict, map: "FKnyrf06usha77obm8xio36plbp")
+
+  @@id([accountId, spacesId])
+  @@index([spacesId], map: "FKnyrf06usha77obm8xio36plbp")
+  @@map("account_space")
+}
+
+model App {
+  id          String     @id @db.VarChar(255)
+  name        String?    @db.VarChar(255)
+  description String?    @db.VarChar(255)
+  iconColor   String?    @map("icon_color") @db.VarChar(255)
+  iconName    String?    @map("icon_name") @db.VarChar(255)
+  version     String?    @db.VarChar(255)
+  homeItemId  String?    @unique(map: "UK_no9f3f29sq173o4ffth1mvo3v") @map("home_item_id") @db.VarChar(255)
+  schemaId    BigInt?    @map("schema_id")
+  tenantId    String?    @map("tenant_id") @db.VarChar(255)
+  sortIndex   Int?       @map("sort_index")
+  metadata    Json?
+  schema      Schema?    @relation(fields: [schemaId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK7rwn0iy9sth4tn6ce9rk3db8u")
+  userApp     UserApp[]
+
+  @@index([schemaId], map: "FK7rwn0iy9sth4tn6ce9rk3db8u")
+  @@index([homeItemId], map: "FKcilc1978pc6t2aqa0umps8n5c")
+  @@map("app")
+}
+
+model AppDataAuthorization {
+  id                       String                     @id @db.VarChar(255)
+  condition                String?                    @db.LongText
+  monitor                  Json?
+  monitored                Json?
+  name                     String?                    @db.VarChar(255)
+  appItemId                String?                    @map("app_item_id") @db.VarChar(255)
+  tenantId                 String?                    @map("tenant_id") @db.VarChar(255)
+  appDataPermissionControl AppDataPermissionControl[]
+
+  @@index([appItemId], map: "FK3iy7co7qltp4er5d5eq05q1sl")
+  @@map("app_data_authorization")
+}
+
+model AppDataPermissionControl {
+  id                   String                @id @db.VarChar(255)
+  fieldControls        Json?                 @map("field_controls")
+  fieldDeleteAll       Boolean               @map("field_delete_all") @db.Bit(1)
+  fieldReadAll         Boolean               @map("field_read_all") @db.Bit(1)
+  fieldWriteAll        Boolean               @map("field_write_all") @db.Bit(1)
+  authorizationId      String?               @map("authorization_id") @db.VarChar(255)
+  tableId              BigInt?               @map("table_id")
+  tenantId             String?               @map("tenant_id") @db.VarChar(255)
+  condition            String?               @db.LongText
+  appDataAuthorization AppDataAuthorization? @relation(fields: [authorizationId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FKa0uf5e9v7bl5m3u1yn3u1mf66")
+  schemaTable          SchemaTable?          @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKj3tcw2ov0vs9etfharja6n0jv")
+
+  @@index([authorizationId], map: "FKa0uf5e9v7bl5m3u1yn3u1mf66")
+  @@index([tableId], map: "FKj3tcw2ov0vs9etfharja6n0jv")
+  @@map("app_data_permission_control")
+}
+
+model AppDataShare {
+  id             BigInt  @id @default(autoincrement())
+  tenantId       String? @map("tenant_id") @db.VarChar(255)
+  shareRecordIds String? @map("share_record_ids") @db.LongText
+  visitor        String? @db.LongText
+  appItemId      BigInt? @map("app_item_id")
+  sharerId       BigInt? @map("sharer_id")
+  user           User?   @relation(fields: [sharerId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FKnyye9x38uiquusbvhl5vv0ndt")
+
+  @@index([sharerId], map: "FKnyye9x38uiquusbvhl5vv0ndt")
+  @@map("app_data_share")
+}
+
+model AppForm {
+  tableId  BigInt? @map("table_id")
+  metadata Json?
+  name     String? @db.VarChar(255)
+  parentId BigInt? @map("parent_id")
+  id       BigInt  @id
+  tenantId String? @map("tenant_id") @db.VarChar(255)
+
+  @@index([parentId], map: "FK5er3fm5aohw76ccy2wkuoqm28")
+  @@index([tableId], map: "FK7xxesv4sr4fcajy1aj8ie6q5j")
+  @@map("app_form")
+}
+
+model AppItem {
+  id               String           @id @db.VarChar(255)
+  name             String?          @db.VarChar(255)
+  description      String?          @db.VarChar(255)
+  iconColor        String?          @map("icon_color") @db.VarChar(255)
+  iconName         String?          @map("icon_name") @db.VarChar(255)
+  metadata         Json?
+  type             AppItemType?
+  version          String?          @db.VarChar(255)
+  appId            String?          @map("app_id") @db.VarChar(255)
+  tableId          BigInt?          @map("table_id")
+  parentId         String?          @map("parent_id") @db.VarChar(255)
+  category         AppItemCategory?
+  tenantId         String?          @map("tenant_id") @db.VarChar(255)
+  flowDefinitionId BigInt?          @unique(map: "UK_snee7x2rvbtfo0amvo3ika618") @map("flow_definition_id")
+  flowDeploymentId BigInt?          @unique(map: "UK_i6uuipgq5h2ttvn6y95q75wi0") @map("flow_deployment_id")
+  sortIndex        Int?             @map("sort_index")
+  formId           BigInt?          @map("form_id")
+  client           ClientTypeEnum?
+  schemaTable      SchemaTable?     @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKguc4qul195meh5jyl64lhn3to")
+  appItem          AppItem?         @relation("app_itemToapp_item", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FKrex3ld07e04rfb0yf7iatyjl3")
+  otherAppItem     AppItem[]        @relation("app_itemToapp_item")
+  appRule          AppRule[]
+  appView          AppView[]
+
+  @@index([appId], map: "FKaowil5488fysudvwed40tykpm")
+  @@index([tableId], map: "FKguc4qul195meh5jyl64lhn3to")
+  @@index([parentId], map: "FKrex3ld07e04rfb0yf7iatyjl3")
+  @@map("app_item")
+}
+
+model AppRule {
+  type      String?  @db.VarChar(31)
+  id        BigInt   @id @default(autoincrement())
+  event     String?  @db.VarChar(20)
+  appItemId String?  @map("app_item_id") @db.VarChar(255)
+  triggerId BigInt?  @map("trigger_id")
+  tenantId  String?  @map("tenant_id") @db.VarChar(255)
+  trigger   Trigger? @relation(fields: [triggerId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKdym0wg6acx8r3k796c8mx9vj7")
+  appItem   AppItem? @relation(fields: [appItemId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FKgxerl2sca66x2hbc324wcsm5y")
+
+  @@index([triggerId], map: "FKdym0wg6acx8r3k796c8mx9vj7")
+  @@index([appItemId], map: "FKgxerl2sca66x2hbc324wcsm5y")
+  @@map("app_rule")
+}
+
+model AppView {
+  id         String           @id @db.VarChar(255)
+  category   AppViewCategory?
+  content    String?          @db.LongText
+  metadata   Json?
+  name       String?          @db.VarChar(255)
+  platform   AppViewPlatform?
+  scene      AppViewScene?
+  type       AppViewType?
+  appItemId  String?          @map("app_item_id") @db.VarChar(255)
+  userId     BigInt?          @map("user_id")
+  tenantId   String?          @map("tenant_id") @db.VarChar(255)
+  tableCode  String?          @map("table_code") @db.VarChar(255)
+  filter     String?          @db.VarChar(255)
+  principals Json?
+  bindFields Json?          @map("bind_fields")
+  user       User?            @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKomf174p9i56ysrjxra71j9np3")
+  appItem    AppItem?         @relation(fields: [appItemId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FKtbj7sv3eossusb0i5gatkotn1")
+
+  @@index([userId], map: "FKomf174p9i56ysrjxra71j9np3")
+  @@index([appItemId], map: "FKtbj7sv3eossusb0i5gatkotn1")
+  @@map("app_view")
+}
+
+model AppViewHistory {
+  filter     String?          @db.VarChar(255)
+  principals Json?
+  metadata   Json?
+  scene      AppViewScene?
+  userId     BigInt?          @map("user_id")
+  tableCode  String?          @map("table_code") @db.VarChar(255)
+  name       String?          @db.VarChar(255)
+  bindFields Json?          @map("bind_fields")
+  platform   AppViewPlatform?
+  content    String?          @db.LongText
+  tenantId   String?          @map("tenant_id") @db.VarChar(255)
+  appItemId  BigInt?          @map("app_item_id")
+  id         BigInt           @id @default(autoincrement())
+  type       AppViewType?
+  category   AppViewCategory?
+
+  @@index([userId], map: "FKomf174p9i5wera71j9np3")
+  @@index([appItemId], map: "FKtbj7sv3eossusb0iewkotn1")
+  @@map("app_view_history")
+}
+
+model AppViewVersion {
+  principals Json?
+  filter     String?          @db.VarChar(255)
+  metadata   Json?
+  scene      AppViewScene?
+  userId     BigInt?          @map("user_id")
+  tableCode  String?          @map("table_code") @db.VarChar(255)
+  name       String?          @db.VarChar(255)
+  bindFields Json?          @map("bind_fields")
+  platform   AppViewPlatform?
+  content    String?          @db.LongText
+  tenantId   String?          @map("tenant_id") @db.VarChar(255)
+  appItemId  BigInt?          @map("app_item_id")
+  id         BigInt           @id @default(autoincrement())
+  type       AppViewType?
+  category   AppViewCategory?
+
+  @@index([userId], map: "FKomf174p9i5wera71j9np3")
+  @@index([appItemId], map: "FKtbj7sv3eossusb0iewkotn1")
+  @@map("app_view_version")
+}
+
+model AuthCredential {
+  id           BigInt        @id @default(autoincrement())
+  credential   String?       @db.VarChar(255)
+  identifier   String?       @db.VarChar(255)
+  identityType Int?          @map("identity_type") @db.TinyInt
+  accountId    BigInt?       @map("account_id")
+  account      Account?      @relation(fields: [accountId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_t7814fqd4ut2g3ubrkm8ukirq")
+  authSession  AuthSession[]
+
+  @@index([accountId], map: "FKq2swvmdh9ms12lqgp4cntxaei")
+  @@map("auth_credential")
+}
+
+model AuthSecret {
+  id           BigInt    @id
+  tenantId     String?   @map("tenant_id") @db.VarChar(255)
+  createTime   DateTime? @map("create_time") @db.DateTime(6)
+  description  String?   @db.VarChar(255)
+  token        String?   @db.VarChar(255)
+  createUserId BigInt?   @map("create_user_id")
+  user         User?     @relation(fields: [createUserId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK6ygc5h25eu8h909e71b17jtia")
+
+  @@index([createUserId], map: "FK6ygc5h25eu8h909e71b17jtia")
+  @@map("auth_secret")
+}
+
+model AuthSession {
+  data           String?         @db.LongText
+  expireTime     DateTime        @map("expire_time") @db.DateTime(6)
+  lastLoginTime  DateTime        @map("last_login_time") @db.DateTime(6)
+  token          String?         @db.VarChar(255)
+  credentialId   BigInt?         @map("credential_id")
+  lastModifiedAt DateTime?       @map("last_modified_at") @db.DateTime(6)
+  id             BigInt          @id @default(autoincrement())
+  authCredential AuthCredential? @relation(fields: [credentialId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK6iqfomftt215c9ostqfh7xnhx")
+
+  @@index([credentialId], map: "FK6iqfomftt215c9ostqfh7xnhx")
+  @@map("auth_session")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MdAppBranch {
+  id              String   @id @db.VarChar(255)
+  name            String?  @db.VarChar(255)
+  sourceBranchId  String?  @map("source_branch_id") @db.VarChar(255)
+  appId           String?  @map("app_id") @db.VarChar(255)
+  appDefinitionId String?  @map("app_definition_id") @db.VarChar(255)
+  tenantId        String?  @map("tenant_id") @db.VarChar(255)
+  createUser      String?  @map("create_user") @db.VarChar(255)
+  createTime      DateTime @map("create_time") @db.DateTime(0)
+
+  @@map("md_app_branch")
+}
+
+model MdAppDataAuthorizationDefinition {
+  id                  String  @id @db.VarChar(255)
+  appId               String? @map("app_id") @db.VarChar(255)
+  appItemId           String? @map("app_item_id") @db.VarChar(255)
+  appItemDefinitionId String? @map("app_item_definition_id") @db.VarChar(255)
+  authorizationId     String? @map("authorization_id") @db.VarChar(255)
+  appBranchId         String? @map("app_branch_id") @db.VarChar(255)
+  tenantId            String? @map("tenant_id") @db.VarChar(255)
+  monitor             Json?
+  condition           String? @db.LongText
+  name                String? @db.VarChar(255)
+  monitored           Json?
+
+  @@index([appItemId], map: "FK3iy7co7qltp4er5d5eq05q1sl")
+  @@map("md_app_data_authorization_definition")
+}
+
+model MdAppDataPermissionControlDefinition {
+  id                  String  @id @db.VarChar(255)
+  appId               String? @map("app_id") @db.VarChar(255)
+  appItemId           String? @map("app_item_id") @db.VarChar(255)
+  appItemDefinitionId String? @map("app_item_definition_id") @db.VarChar(255)
+  tenantId            String? @map("tenant_id") @db.VarChar(255)
+  fieldDeleteAll      Boolean @map("field_delete_all") @db.Bit(1)
+  fieldReadAll        Boolean @map("field_read_all") @db.Bit(1)
+  condition           String? @db.LongText
+  fieldWriteAll       Boolean @map("field_write_all") @db.Bit(1)
+  authorizationId     BigInt? @map("authorization_id")
+  tableId             BigInt? @map("table_id")
+  fieldControls       Json?   @map("field_controls")
+
+  @@index([authorizationId], map: "FKa0uf5e9v7bl5m3u1yn3u1mf66")
+  @@index([tableId], map: "FKj3tcw2ov0vs9etfharja6n0jv")
+  @@map("md_app_data_permission_control_definition")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MdAppDefinition {
+  id          String     @id @db.VarChar(255)
+  appId       String     @map("app_id") @db.VarChar(255)
+  name        String?    @db.VarChar(255)
+  schemaId    BigInt?    @map("schema_id")
+  homeItemId  String?    @map("home_item_id") @db.VarChar(255)
+  sortIndex   Int?       @map("sort_index")
+  metadata    Json?
+  iconColor   String?    @map("icon_color") @db.VarChar(255)
+  iconName    String?    @map("icon_name") @db.VarChar(255)
+  description String?    @db.VarChar(255)
+  status      AppStatus?
+  operator    String?    @db.VarChar(255)
+  createTime  DateTime   @map("create_time") @db.DateTime(0)
+  tenantId    String?    @map("tenant_id") @db.VarChar(255)
+
+  @@index([schemaId], map: "FK7rwn0iy9sth4tn6ce9rk3db8u")
+  @@map("md_app_definition")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MdAppDeploymentHistory {
+  id              String   @id @db.VarChar(255)
+  appId           String?  @map("app_id") @db.VarChar(255)
+  appDefinitionId String?  @map("app_definition_id") @db.VarChar(255)
+  appBranchId     String?  @map("app_branch_id") @db.VarChar(255)
+  version         String?  @db.VarChar(50)
+  remark          String?  @db.VarChar(255)
+  operator        String?  @db.VarChar(255)
+  createTime      DateTime @map("create_time") @db.DateTime(0)
+  tenantId        String?  @map("tenant_id") @db.VarChar(255)
+  configuration   String?  @db.LongText
+
+  @@map("md_app_deployment_history")
+}
+
+model MdAppTemplate {
+  id             String    @id @db.VarChar(255)
+  name           String    @db.VarChar(255)
+  description    String?   @db.VarChar(500)
+  icon           String?   @db.VarChar(255)
+  category       String?   @db.VarChar(100)
+  tags           Json?
+
+  sourceAppId    String?   @map("source_app_id") @db.VarChar(255)
+  sourceVersion  String?   @map("source_version") @db.VarChar(255)
+  configuration  String    @db.LongText
+
+  creator        String?   @map("creator") @db.VarChar(255)
+  createTime     DateTime  @map("create_time") @db.DateTime(0)
+  updateTime     DateTime? @map("update_time") @db.DateTime(0)
+
+  @@index([category])
+  @@index([creator])
+  @@map("md_app_template")
+}
+
+model MdAppItemDefinition {
+  id               String           @id @db.VarChar(255)
+  appDefinitionId  String?          @map("app_definition_id") @db.VarChar(255)
+  appId            String?          @map("app_id") @db.VarChar(255)
+  appItemId        String?          @map("app_item_id") @db.VarChar(255)
+  appBranchId      String?          @map("app_branch_id") @db.VarChar(255)
+  name             String?          @db.VarChar(255)
+  flowDeploymentId BigInt?          @unique(map: "UK_i6uuipgq5h2ttvn6y95q75wi0") @map("flow_deployment_id")
+  tenantId         String?          @map("tenant_id") @db.VarChar(255)
+  iconName         String?          @map("icon_name") @db.VarChar(255)
+  tableId          BigInt?          @map("table_id")
+  formId           BigInt?          @unique(map: "UK_h3f3jtvf4vhhl2d75pj9x7v99") @map("form_id")
+  table            SchemaTable?     @relation(fields: [tableId], references: [id])
+  version          String?          @db.VarChar(255)
+  parentId         String?          @map("parent_id") @db.VarChar(255)
+  sortIndex        Int?             @map("sort_index")
+  iconColor        String?          @map("icon_color") @db.VarChar(255)
+  category         AppItemCategory?
+  metadata         Json?
+  description      String?          @db.VarChar(255)
+  flowDefinitionId BigInt?          @unique(map: "UK_snee7x2rvbtfo0amvo3ika618") @map("flow_definition_id")
+  type             AppItemType?
+  client           ClientTypeEnum?
+
+  @@index([appId], map: "FKaowil5488fysudvwed40tykpm")
+  @@index([tableId], map: "FKguc4qul195meh5jyl64lhn3to")
+  @@index([parentId], map: "FKrex3ld07e04rfb0yf7iatyjl3")
+  @@map("md_app_item_definition")
+}
+
+model MdAppViewDefinition {
+  id                  String           @id @db.VarChar(255)
+  appId               String?          @map("app_id") @db.VarChar(255)
+  appItemId           String?          @map("app_item_id") @db.VarChar(255)
+  appItemDefinitionId String?          @map("app_item_definition_id") @db.VarChar(255)
+  appViewId           String?          @map("app_view_id") @db.VarChar(255)
+  appBranchId         String?          @map("app_branch_id") @db.VarChar(255)
+  filter              String?          @db.VarChar(255)
+  platform            AppViewPlatform?
+  type                AppViewType?
+  tableCode           String?          @map("table_code") @db.VarChar(255)
+  tenantId            String?          @map("tenant_id") @db.VarChar(255)
+  scene               AppViewScene?
+  name                String?          @db.VarChar(255)
+  metadata            Json?
+  content             String?          @db.LongText
+  principals          Json?
+  bindFields          Json?            @map("bind_fields")
+  category            AppViewCategory?
+  userId              BigInt?          @map("user_id")
+
+  @@index([userId], map: "FKomf174p9i56ysrjxra71j9np3")
+  @@index([appItemId], map: "FKtbj7sv3eossusb0i5gatkotn1")
+  @@map("md_app_view_definition")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model MdAppViewDefinitionHistory {
+  id                  String   @id @db.VarChar(255)
+  appViewDefinitionId String?  @map("app_view_definition_id") @db.VarChar(255)
+  appId               String?  @map("app_id") @db.VarChar(255)
+  appItemId           String?  @map("app_item_id") @db.VarChar(255)
+  appItemDefinitionId String?  @map("app_item_definition_id") @db.VarChar(255)
+  appBranchId         String?  @map("app_branch_id") @db.VarChar(255)
+  appViewId           String?  @map("app_view_id") @db.VarChar(255)
+  filter              String?  @db.VarChar(255)
+  platform            AppViewPlatform?
+  type                AppViewType?
+  tableCode           String?  @map("table_code") @db.VarChar(255)
+  tenantId            String?  @map("tenant_id") @db.VarChar(255)
+  scene               AppViewScene?
+  name                String?  @db.VarChar(255)
+  metadata            Json?
+  content             String?  @db.LongText
+  principals          Json?
+  bindFields          Json?    @map("bind_fields")
+  category            AppViewCategory?
+  userId              BigInt?  @map("user_id")
+  operator            String?  @db.VarChar(255)
+  createTime          DateTime @map("create_time") @db.DateTime(0)
+
+  @@index([userId], map: "FKomf174p9i56ysrjxra71j9np3")
+  @@index([appItemId], map: "FKtbj7sv3eossusb0i5gatkotn1")
+  @@map("md_app_view_definition_history")
+}
+
+model Message {
+  id                  BigInt                @id @default(autoincrement())
+  content             String?               @db.LongText
+  paramModel          String?               @map("param_model") @db.LongText
+  title               String?               @db.VarChar(255)
+  type                Int?                  @db.TinyInt
+  senderId            BigInt?               @map("sender_id")
+  time                DateTime?             @db.DateTime(6)
+  tenantId            String?               @map("tenant_id") @db.VarChar(255)
+  user                User?                 @relation(fields: [senderId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK7m83l67ilb72af0lce8mkjhms")
+  messageNotification MessageNotification[]
+
+  @@index([senderId], map: "FK7m83l67ilb72af0lce8mkjhms")
+  @@map("message")
+}
+
+model MessageNotification {
+  id                                      BigInt    @id
+  isDelivery                              Boolean?  @map("is_delivery") @db.Bit(1)
+  isRead                                  Boolean?  @map("is_read") @db.Bit(1)
+  retryCount                              Int       @map("retry_count")
+  retryable                               Boolean   @db.Bit(1)
+  messageId                               BigInt?   @map("message_id")
+  receiverId                              BigInt?   @map("receiver_id")
+  senderId                                BigInt?   @map("sender_id")
+  dueTime                                 DateTime? @map("due_time") @db.DateTime(6)
+  sendTime                                DateTime? @map("send_time") @db.DateTime(6)
+  receiverTenantId                        String?   @map("receiver_tenant_id") @db.VarChar(255)
+  senderTenantId                          String?   @map("sender_tenant_id") @db.VarChar(255)
+  tenantId                                String?   @map("tenant_id") @db.VarChar(255)
+  message                                 Message?  @relation(fields: [messageId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKb0bkd6ps9gbktwmgy79rgydqb")
+  userMessageNotificationReceiverIdToUser User?     @relation("message_notification_receiver_idTouser", fields: [receiverId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKeyxqcsslj4g27aohkq9fkbu7d")
+  userMessageNotificationSenderIdToUser   User?     @relation("message_notification_sender_idTouser", fields: [senderId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKr9olbuto2g8d7pa4culbd273g")
+
+  @@index([messageId], map: "FKb0bkd6ps9gbktwmgy79rgydqb")
+  @@index([receiverId], map: "FKeyxqcsslj4g27aohkq9fkbu7d")
+  @@index([senderId], map: "FKr9olbuto2g8d7pa4culbd273g")
+  @@map("message_notification")
+}
+
+model MessageTemplate {
+  id      BigInt  @id
+  content String? @db.LongText
+  subject String? @db.VarChar(255)
+  type    Int?    @unique(map: "UK_8lm7ururpeeyala5wkipiupyn") @db.TinyInt
+
+  @@map("message_template")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Organization {
+  id                              BigInt              @id @default(autoincrement())
+  name                            String?             @db.VarChar(255)
+  parentIds                       String?             @map("parent_ids") @db.VarChar(255)
+  type                            Int                 @db.TinyInt
+  leaderId                        BigInt?             @unique(map: "UK_5pjyclsx15cp3hf9hx9gyjfex") @map("leader_id")
+  parentId                        BigInt?             @map("parent_id")
+  tenantId                        String?             @map("tenant_id") @db.VarChar(255)
+  organization                    Organization?       @relation("organizationToorganization", fields: [parentId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK7vn3ssl1dnw7dlry2ccjwf77d")
+  otherOrganization               Organization[]      @relation("organizationToorganization")
+  userOrganizationLeaderIdToUser  User?               @relation("organization_leader_idTouser", fields: [leaderId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKnwysou5t66thoquk993irouac")
+  roleMember                      RoleMember[]
+  userUserMainJobIdToOrganization User[]              @relation("user_main_job_idToorganization")
+  userOrganization                UserOrganization[]
+
+  @@unique([tenantId, parentId, name], map: "UKjfyvwlr0fjy85vl17l1mx9ci0")
+  @@unique([tenantId, parentId, name], map: "UKqylhvalx1eit5spsdjotb22tu")
+  @@index([parentId], map: "FK7vn3ssl1dnw7dlry2ccjwf77d")
+  @@index([leaderId], map: "FKnwysou5t66thoquk993irouac")
+  @@map("organization")
+}
+
+model Role {
+  id                BigInt              @id @default(autoincrement())
+  description       String?             @db.VarChar(255)
+  name              String?             @db.VarChar(255)
+  tenantId          String?             @map("tenant_id") @db.VarChar(255)
+  roleMember        RoleMember[]
+
+  @@map("role")
+}
+
+model RoleMember {
+  type           String?       @db.VarChar(31)
+  id             BigInt        @id
+  roleId         BigInt?       @map("role_id")
+  organizationId BigInt?       @map("organization_id")
+  userId         BigInt?       @map("user_id")
+  tenantId       String?       @map("tenant_id") @db.VarChar(255)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK99qxgjnn7ls4kwrlpe70nuwc6")
+  role           Role?         @relation(fields: [roleId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK_14oy38xrh5l80wh46f4i766do")
+  user           User?         @relation(fields: [userId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKt1sp0539rdde3nsc3hf6vv9p3")
+
+  @@unique([roleId, organizationId], map: "uc_rolemember_role_id_organization_id")
+  @@unique([roleId, userId], map: "uc_rolemember_role_id_user_id")
+  @@index([organizationId], map: "FK99qxgjnn7ls4kwrlpe70nuwc6")
+  @@index([userId], map: "FKt1sp0539rdde3nsc3hf6vv9p3")
+  @@map("role_member")
+}
+
+model Schema {
+  id          BigInt        @id @default(autoincrement())
+  metadata    Json?
+  name        String?       @db.VarChar(255)
+  dataSource  String?       @map("data_source") @db.LongText
+  tenantId    String?       @map("tenant_id") @db.VarChar(255)
+  datasource  String?       @db.LongText
+  key         String?       @unique(map: "uc_schema_key") @db.VarChar(255)
+  app         App[]
+  schemaTable SchemaTable[]
+  trigger     Trigger[]
+
+  @@map("schema")
+}
+
+model SchemaField {
+  id                                                        BigInt           @id @default(autoincrement())
+  index                                                     Int
+  metadata                                                  Json?
+  name                                                      String?          @db.VarChar(255)
+  type                                                      String?          @db.VarChar(31)
+  tableId                                                   BigInt?          @map("table_id")
+  tenantId                                                  String?          @map("tenant_id") @db.VarChar(255)
+  key                                                       String?          @db.VarChar(255)
+  schemaTable                                               SchemaTable?     @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKaxfo2igukcxjvuqpctvxl7x63")
+  schemaRelationSchemaRelationFieldIdToSchemaField          SchemaRelation[] @relation("schema_relation_field_idToschema_field")
+  schemaRelationSchemaRelationReferenceFieldIdToSchemaField SchemaRelation[] @relation("schema_relation_reference_field_idToschema_field")
+
+  @@unique([tenantId, key, tableId], map: "uc_schemafield_key_table_id")
+  @@index([tableId], map: "FKaxfo2igukcxjvuqpctvxl7x63")
+  @@map("schema_field")
+}
+
+model SchemaIndex {
+  id           BigInt       @id
+  fields       String?      @db.LongText
+  name         String?      @db.VarChar(255)
+  unique       Boolean      @db.Bit(1)
+  tableId      BigInt?      @map("table_id")
+  tenantId     String?      @map("tenant_id") @db.VarChar(255)
+  validMessage String?      @map("valid_message") @db.VarChar(255)
+  key          String?      @db.VarChar(255)
+  schemaTable  SchemaTable? @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK679midq349n9lmvjk7wikdjic")
+
+  @@unique([tenantId, key, tableId], map: "uc_schemaindex_key_table_id")
+  @@index([tableId], map: "FK679midq349n9lmvjk7wikdjic")
+  @@map("schema_index")
+}
+
+model SchemaRelation {
+  id                                                     BigInt       @id
+  tenantId                                               String?      @map("tenant_id") @db.VarChar(255)
+  cascadeDelete                                          Boolean      @map("cascade_delete") @db.Bit(1)
+  type                                                   Int?         @db.TinyInt
+  referenceTableId                                       BigInt?      @map("reference_table_id")
+  tableId                                                BigInt?      @map("table_id")
+  fieldId                                                BigInt?      @map("field_id")
+  referenceFieldId                                       BigInt?      @map("reference_field_id")
+  mode                                                   String?      @db.VarChar(31)
+  condition                                              String?      @db.VarChar(255)
+  schemaFieldSchemaRelationFieldIdToSchemaField          SchemaField? @relation("schema_relation_field_idToschema_field", fields: [fieldId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK2eef1v8pt68ebal82jgi9tsl8")
+  schemaFieldSchemaRelationReferenceFieldIdToSchemaField SchemaField? @relation("schema_relation_reference_field_idToschema_field", fields: [referenceFieldId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK66gr22lsbl4eo6jc3wprdk8ee")
+  schemaTableSchemaRelationTableIdToSchemaTable          SchemaTable? @relation("schema_relation_table_idToschema_table", fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK9crs4er2omvr8kxsuas9symrg")
+  schemaTableSchemaRelationReferenceTableIdToSchemaTable SchemaTable? @relation("schema_relation_reference_table_idToschema_table", fields: [referenceTableId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKsr488n29w3ecjxj4rcrn15iws")
+
+  @@unique([tenantId, tableId, referenceTableId], map: "UKcjrmm5g2sjsy2godfvx7rudw1")
+  @@unique([tenantId, tableId, referenceTableId], map: "UKrxh8qv5h7pxi5gglu6pktaput")
+  @@index([fieldId], map: "FK2eef1v8pt68ebal82jgi9tsl8")
+  @@index([referenceFieldId], map: "FK66gr22lsbl4eo6jc3wprdk8ee")
+  @@index([tableId], map: "FK9crs4er2omvr8kxsuas9symrg")
+  @@index([referenceTableId], map: "FKsr488n29w3ecjxj4rcrn15iws")
+  @@map("schema_relation")
+}
+
+model SchemaTable {
+  id                                                        BigInt                     @id @default(autoincrement())
+  metadata                                                  Json?
+  name                                                      String?                    @db.VarChar(255)
+  schemaId                                                  BigInt?                    @map("schema_id")
+  tenantId                                                  String?                    @map("tenant_id") @db.VarChar(255)
+  key                                                       String?                    @db.VarChar(255)
+  appDataPermissionControl                                  AppDataPermissionControl[]
+  appItem                                                   AppItem[]
+  fields                                                    SchemaField[]
+  indexes                                                   SchemaIndex[]
+  schemaRelationSchemaRelationTableIdToSchemaTable          SchemaRelation[]           @relation("schema_relation_table_idToschema_table")
+  schemaRelationSchemaRelationReferenceTableIdToSchemaTable SchemaRelation[]           @relation("schema_relation_reference_table_idToschema_table")
+  schema                                                    Schema?                    @relation(fields: [schemaId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKma8gb1ilel4w5txvc0jiwxq90")
+  trigger                                                   Trigger[]
+  mdAppItemDefinitions                                      MdAppItemDefinition[]
+
+  @@unique([tenantId, schemaId, key], map: "UKagcfger1m596ghtpmk7iq8cqg")
+  @@index([schemaId], map: "FKma8gb1ilel4w5txvc0jiwxq90")
+  @@map("schema_table")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model Setting {
+  key      String  @unique(map: "uc_key") @db.VarChar(31)
+  id       BigInt  @id @default(autoincrement())
+  property String? @db.LongText
+
+  @@map("setting")
+}
+
+model Space {
+  id              BigInt            @id @default(autoincrement())
+  name            String?           @db.VarChar(255)
+  landingPage     String?           @map("landing_page") @db.VarChar(255)
+  userExtendTable String?           @map("user_extend_table") @db.VarChar(255)
+  key             String?           @unique(map: "UK_o7xk10mhwvh568mkphv20h22k") @db.VarChar(255)
+  account         Account[]
+  accountSpace    AccountSpace[]
+  spaceInvitation SpaceInvitation[]
+
+  @@map("space")
+}
+
+model SpaceInvitation {
+  id        BigInt    @id
+  code      String?   @db.VarChar(255)
+  dueTime   DateTime? @map("due_time") @db.DateTime(6)
+  inviterId BigInt?   @map("inviter_id")
+  spaceId   BigInt?   @map("space_id")
+  account   Account?  @relation(fields: [inviterId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FK75vkjmomlakcleiw6592ye8y0")
+  user      User?     @relation(fields: [inviterId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKjr609kyduhnhfkevavxni7kfl")
+  space     Space?    @relation(fields: [spaceId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKqruduo74x42kk2pr4647njk6o")
+
+  @@index([inviterId], map: "FK75vkjmomlakcleiw6592ye8y0")
+  @@index([spaceId], map: "FKqruduo74x42kk2pr4647njk6o")
+  @@map("space_invitation")
+}
+
+model Storage {
+  id        BigInt    @id
+  createdAt DateTime? @map("created_at") @db.DateTime(6)
+  createdBy BigInt?   @map("created_by")
+  key       String?   @unique(map: "uc_storage_key") @db.VarChar(255)
+  name      String?   @db.VarChar(255)
+  size      BigInt?
+  type      String?   @db.VarChar(255)
+  url       String?   @db.VarChar(255)
+
+  @@map("storage")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model StorageConfig {
+  id          BigInt    @id @default(autoincrement())
+  accessKey   String?   @map("access_key") @db.VarChar(255)
+  address     String?   @db.VarChar(255)
+  bucketName  String?   @map("bucket_name") @db.VarChar(255)
+  createTime  DateTime? @map("create_time") @db.DateTime(6)
+  endpoint    String?   @db.VarChar(255)
+  isDefault   Boolean?  @map("is_default") @db.Bit(1)
+  name        String?   @db.VarChar(255)
+  secretKey   String?   @map("secret_key") @db.VarChar(255)
+  storageId   String?   @unique(map: "UKgu00p3of1fm91ljl0eqa6iiyh") @map("storage_id") @db.VarChar(255)
+  storagePath String?   @map("storage_path") @db.VarChar(255)
+  type        Int?      @db.TinyInt
+
+  @@map("storage_config")
+}
+
+model StorageFile {
+  id         BigInt    @id
+  createTime DateTime? @map("create_time") @db.DateTime(6)
+  key        String?   @unique(map: "UKrjmji83bbyi8fwf0xq74mp6nk") @db.VarChar(255)
+  name       String?   @db.VarChar(255)
+  size       BigInt?
+  storageId  String?   @map("storage_id") @db.VarChar(255)
+  type       String?   @db.VarChar(255)
+  url        String?   @db.VarChar(255)
+
+  @@map("storage_file")
+}
+
+model StoredEvent {
+  id         BigInt    @id
+  eventBody  String?   @map("event_body") @db.LongText
+  occurredOn DateTime? @map("occurred_on") @db.DateTime(6)
+  typeName   String?   @map("type_name") @db.VarChar(255)
+  tenantId   String?   @map("tenant_id") @db.VarChar(255)
+
+  @@index([typeName], map: "idx_storedevent_typename")
+  @@map("stored_event")
+}
+
+model Trigger {
+  id          BigInt       @id @default(autoincrement())
+  condition   String?      @db.LongText
+  definition  String?      @db.LongText
+  event       Int          @db.TinyInt
+  name        String?      @db.VarChar(255)
+  order       Int
+  schemaId    BigInt?      @map("schema_id")
+  tableId     BigInt?      @map("table_id")
+  tenantId    String?      @map("tenant_id") @db.VarChar(255)
+  isBefore    Boolean?     @map("is_before") @db.Bit(1)
+  isEnabled   Boolean?     @map("is_enabled") @db.Bit(1)
+  appRule     AppRule[]
+  schemaTable SchemaTable? @relation(fields: [tableId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKm4bpl5bwgfw36g8hk4a37n4ll")
+  schema      Schema?      @relation(fields: [schemaId], references: [id], onDelete: Restrict, onUpdate: Restrict, map: "FKofx6wrighxbd4nq9dhrfbhulw")
+
+  @@index([tableId], map: "FKm4bpl5bwgfw36g8hk4a37n4ll")
+  @@index([schemaId], map: "FKofx6wrighxbd4nq9dhrfbhulw")
+  @@map("trigger")
+}
+
+model UserApp {
+  userId     BigInt @map("user_id")
+  appStarsId String @map("app_stars_id") @db.VarChar(255)
+  app        App    @relation(fields: [appStarsId], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "FK5e5fp0svvyd1dc8sf3plgjqmn")
+  user       User   @relation(fields: [userId], references: [id], onUpdate: Restrict, map: "FKksf6jkssun3koi2vdj8e1gq1j")
+
+  @@id([userId, appStarsId])
+  @@index([appStarsId], map: "FK5e5fp0svvyd1dc8sf3plgjqmn")
+  @@map("user_app")
+}
+
+model UserOrganization {
+  userId         BigInt       @map("user_id")
+  partTimeJobsId BigInt       @map("part_time_jobs_id")
+  organization   Organization @relation(fields: [partTimeJobsId], references: [id], onUpdate: Restrict, map: "FK3omeyvhaq04ikmki98a4sek97")
+  user           User         @relation(fields: [userId], references: [id], onUpdate: Restrict, map: "FKaml2v7lrdhhe8jdbbyagkc0mu")
+
+  @@id([userId, partTimeJobsId])
+  @@index([partTimeJobsId], map: "FK3omeyvhaq04ikmki98a4sek97")
+  @@map("user_organization")
+}
+
+model VerificationCode {
+  id         BigInt    @id @default(autoincrement())
+  code       String?   @db.VarChar(255)
+  createTime DateTime? @map("create_time") @db.DateTime(6)
+  expireTime DateTime? @map("expire_time") @db.DateTime(6)
+  identifier String?   @db.VarChar(255)
+  type       Int?      @db.TinyInt
+  isUsed     Boolean?  @map("is_used") @db.Bit(1)
+
+  @@map("verification_code")
+}
