@@ -1,4 +1,5 @@
 import z from 'zod'
+import { appTemplateRouter } from '../modules/app-template'
 import { authRouter } from '../modules/auth'
 import { designRouter } from '../modules/design'
 import { runtimeRouter } from '../modules/runtime'
@@ -14,6 +15,7 @@ const routes = {
   auth: authRouter,
   design: designRouter,
   runtime: runtimeRouter,
+  appTemplate: appTemplateRouter,
   // file: fileRouter,
   // sub: subRouter,
   // tags: tagsRouter,
